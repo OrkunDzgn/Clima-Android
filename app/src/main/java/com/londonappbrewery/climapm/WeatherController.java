@@ -14,6 +14,16 @@ import android.util.Log;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.JsonHttpResponseHandler;
+import com.loopj.android.http.RequestParams;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import cz.msebera.android.httpclient.Header;
 
 
 public class WeatherController extends AppCompatActivity {
@@ -31,6 +41,8 @@ public class WeatherController extends AppCompatActivity {
     String LOCATION_PROVIDER = LocationManager.NETWORK_PROVIDER;
 
     final int REQUEST_CODE = 123;
+
+    WeatherDataModel weatherDataModel;
 
 
     // Member Variables:
@@ -74,12 +86,19 @@ public class WeatherController extends AppCompatActivity {
 
     // TODO: Add getWeatherForCurrentLocation() here:
     private void getWeatherForCurrentLocation() {
+        Log.d("Clima", "getWeatherForCurrentLocation() called");
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         mLocationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
                 Log.d("tag", "OnLocationChanged() received");
+
+                RequestParams params = new RequestParams();
+                params.put("lat", String.valueOf(location.getLatitude()));
+                params.put("lon", String.valueOf(location.getLongitude()));
+                params.put("appid", APP_ID);
+                letsDoSomeNetworking(params);
             }
 
             @Override
@@ -118,11 +137,35 @@ public class WeatherController extends AppCompatActivity {
     }
 
     // TODO: Add letsDoSomeNetworking(RequestParams params) here:
+    private void letsDoSomeNetworking(RequestParams params) {
+        Log.d("Clima", "letsDoSomeNetworking() called");
+        AsyncHttpClient client = new AsyncHttpClient();
+        client.get(WEATHER_URL, params, new JsonHttpResponseHandler() {
 
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                Log.d("Weather data: ", response.toString());
+                weatherDataModel = WeatherDataModel.fromJson(response);
+                updateUI(weatherDataModel);
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
+                Log.d("Error", throwable.toString());
+                Toast.makeText(WeatherController.this, "Request Failed", Toast.LENGTH_SHORT );
+            }
+        });
+    }
 
 
     // TODO: Add updateUI() here:
+    private void updateUI(WeatherDataModel weather) {
+        mTemperatureLabel.setText(weather.getmTemperature());
+        mCityLabel.setText(weather.getmCity());
 
+        int resourceID = getResources().getIdentifier(weather.getmIconName(),"drawable", getPackageName());
+        mWeatherImage.setImageResource(resourceID);
+    }
 
 
     // TODO: Add onPause() here:
